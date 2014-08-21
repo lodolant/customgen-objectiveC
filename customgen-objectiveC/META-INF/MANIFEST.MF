@@ -1,9 +1,9 @@
 Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
-Bundle-Name: Acceleo Customgen-vbnet Module Runtime Plug-in
-Bundle-SymbolicName: customgen-vbnet
+Bundle-Name: Acceleo Customgen-objectiveC Module Runtime Plug-in
+Bundle-SymbolicName: customgen-objectiveC
 Bundle-Version: 1.0.0.qualifier
-Bundle-Activator: customgen-vbnet.Activator
+Bundle-Activator: customgen-objectiveC.Activator
 Bundle-Vendor: Eclipse Modeling Project
 Require-Bundle: org.eclipse.core.runtime, 
  org.eclipse.emf.ecore,
