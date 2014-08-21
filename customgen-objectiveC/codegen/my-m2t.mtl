@@ -1,0 +1,130 @@
+[comment encoding = UTF-8 /]
+[comment]
+ As we handle UML models, we register UML metamodel.
+ Be careful while changing .mtl name, module name MUST 
+ have the same name as its file.
+[/comment]
+[module my-m2t('http://www.eclipse.org/uml2/4.0.0/UML')]
+
+[comment]
+ Main entry.
+ * Do NOT change its name, it must be "generate".
+ * You can change input UML type to the one
+   you want (e.g, "m : Model" or "c : Class" ...).
+ * "[file ../]" block can be transfered in other 
+   templates. Main entry does NOT have to contain
+   this block, it can be put in other ones.
+[/comment]
+[template public generate(m : Model)]
+[comment @main/]
+[m.packagedElement.gen()/]
+[/template]
+
+
+[template public gen(p : PackageableElement)]
+[/template]
+
+
+[template public gen(p : Package) ? (not p.packagedElement->isEmpty())]
+# ['['/]PACKAGE] [p.qualifiedName/]
+[p.packagedElement->select(not oclIsKindOf(Package)).gen()/]
+[p.packagedElement->select(oclIsKindOf(Package)).gen()/]
+[/template]
+
+
+[template public gen(c : Class)]
+[file ('src/'.concat(c.qualifiedName.path()).concat('.vb'), false, 'UTF-8')]
+' Generated from GenMyModel
+[if (c.visibility = VisibilityKind::public)]
+Public Class [c.name/]
+[else]
+Private Class [c.name/]
+[/if]
+
+[for (p : Property | c.ownedAttribute)]
+[p.genAttribute()/]
+[/for]
+
+	Sub New()
+		' TODO : Complete constructor
+	End Sub
+
+[for (o : Operation | c.ownedOperation)]
+	[o.genOperation()/]
+[/for]
+End Class
+[/file]
+[/template]
+
+[template public genAttribute(p : Property)]
+[if (p.visibility = VisibilityKind::private)]Private [p.name/] As [p.type.name/][else]Dim [p.name/] As [p.type.name/][/if]
+[/template]
+
+
+[template public genOperation(o : Operation)]
+[if (o.name.startsWith('asProperty_'))]
+[genProperty(o)/]
+[else]
+[if (o.visibility = VisibilityKind::private)]Private[else]Public[/if] [genMethod(o)/] [o.name/]([genArguments(o)/])
+	'[protected (o.name)]
+	' TODO : Complete method
+	[o.genActivityFlow()/]
+	'[/protected]
+End [if (o.returnResult()->exists(type <> null))]Function[else]Sub[/if]
+[/if]
+
+[/template]
+
+
+[template public genMethod(o : Operation)]
+[if (o.returnResult()->exists(type <> null))]Function[else]Sub[/if]
+[/template]
+
+
+[template public genProperty(o : Operation)]
+[if (o.visibility = VisibilityKind::private)]Private[else]Public[/if] Property [o.name.replace('asProperty_', (''))/]()
+[if (o.returnResult()->exists(o.returnResult().type <> null))] As [o.returnResult().type.name/][/if]
+	Get
+		Return [o.name.replace('asProperty_', (''))/]
+	End Get
+	Set(ByVal value[if (o.returnResult()->exists(o.returnResult().type <> null))] As [o.returnResult().type.name/][/if])
+		[o.name.replace('asProperty_', (''))/] = value
+	End Set
+End Property
+
+[/template]
+
+
+[template public genArguments(o : Operation)]
+[for (p : Parameter | o.ownedParameter) separator (', ') ? (p.direction <> ParameterDirectionKind::return)][if (p <> o.returnResult())]ByVal [p.name/][if (p.type <> null)] As [p.type.name/][/if][/if][/for]
+[/template]
+
+
+[template public genActivityFlow(o : Operation)]
+[for (p : PackageableElement | o.getModel().packagedElement)][let a : Activity = p][if(o.name = a.name)][for (n : ActivityNode | a.ownedNode)][let i : InitialNode = n]
+[i.genActivityFlow()/]
+[/let][/for][/if][/let][/for]
+[/template]
+
+
+[template public genActivityFlow(n : ActivityNode) ? (n.oclIsTypeOf(InitialNode))]
+[for (e : ActivityEdge | n.outgoing)][e.target.genActivityFlow()/][/for]
+[/template]
+
+
+[template public genActivityFlow(n : ActivityNode) ? (n.oclIsTypeOf(OpaqueAction))]
+[for (n.outgoing)][n.outgoing.target.genActivityFlow()/][/for]
+[/template]
+
+
+[template public genActivityFlow(n : ActivityNode) ? (n.oclIsTypeOf(DecisionNode))]
+[for (o : ActivityEdge | n.outgoing)][n.outgoing.target.genActivityFlow()/]
+	If ([o.guard.stringValue()/]) ' [n.incoming.source.name/]
+		[o.target.genActivityFlow()/]
+	End If[/for]
+[/template]
+
+
+[query public path(n : String) : String = 
+	n.replaceAll('[^:]*::(.*)', '$1').replaceAll('::', '/')
+/]
