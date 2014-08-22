@@ -18,6 +18,7 @@
 [template public generate(m : Model)]
 [comment @main/]
 [m.packagedElement.gen()/]
+[generateMain()/]
 [/template]
 
 
@@ -33,95 +34,145 @@
 
 
 [template public gen(c : Class)]
-[file ('src/'.concat(c.qualifiedName.path()).concat('.vb'), false, 'UTF-8')]
-' Generated from GenMyModel
-[if (c.visibility = VisibilityKind::public)]
-Public Class [c.name/]
-[else]
-Private Class [c.name/]
-[/if]
+[c.generateMFile()/]
+[c.generateHFile()/]
+[/template]
 
-[for (p : Property | c.ownedAttribute)]
-[p.genAttribute()/]
-[/for]
 
-	Sub New()
-		' TODO : Complete constructor
-	End Sub
+[template public generateMain()]
+[file ('src/main.m', false, 'UTF-8')]
+#import <Foundation/Foundation.h>
 
-[for (o : Operation | c.ownedOperation)]
-	[o.genOperation()/]
-[/for]
-End Class
+int main(int argc, const char * argv['[]'/])
+{
+	NSAutoreleasePool * pool = ['[['/]NSAutoreleasePool alloc[']'/] init[']'/];
+	
+	// TODO auto-generated main
+	
+	['['/]pool drain[']'/];
+	return 0;
+}
 [/file]
 [/template]
 
-[template public genAttribute(p : Property)]
-[if (p.visibility = VisibilityKind::private)]Private [p.name/] As [p.type.name/][else]Dim [p.name/] As [p.type.name/][/if]
+[template public generateMFile(c : Class)]
+[file ('src/'.concat(c.qualifiedName.path()).concat('.m'), false, 'UTF-8')]
+#import <[c.qualifiedName.path()/].h>
+
+// Generated from GenMyModel
+@implementation [c.name/]
+
+/* Methods of the class */
+[c.ownedOperation.generateMethod()/]
+
+/* Accessors of the class */
+[c.ownedAttribute.generateAccessorsImpl()/]
+
+/* Classical Objective-C methods */
+- (NSString *) description
+{
+	// TODO auto-generated method
+	return ['['/]super description[']'/];
+}
+
+- (void) dealloc
+{
+	// TODO auto-generated method
+	['['/]super dealloc[']'/];
+}
+[/file]
 [/template]
 
+
+[template public generateMethod(o : Operation)]
+[genOperation()/]
+{
+[if (o.name.startsWith('init'))]
+	if((self = ['['/]super init[']'/]))
+	{
+		// TODO auto-generated constructor
+	}
+	return self;
+[else]
+	// TODO auto-generated method
+[/if]
+}
+
+[/template]
+
+
+[template public generateAccessorsImpl(p : Property)]
+- ([p.type.genType()/]) [p.name/]
+{
+	return [p.name/];
+}
+
+- (void) set[p.name.toUpperFirst()/]:([p.type.genType()/]) new[p.name.toUpperFirst()/]
+{
+	[p.name/] = new[p.name.toUpperFirst()/];
+}
+
+[/template]
+
+
+[template public generateHFile(c : Class)]
+[file ('src/'.concat(c.qualifiedName.path()).concat('.h'), false, 'UTF-8')]
+#import <Foundation/Foundation.h>
+
+// Generated from GenMyModel
+@interface [c.name/] : [c.genGeneralization()/]
+{
+	[c.attribute.genAttributes()/]
+}
+
+/* Methods of the class*/
+[c.ownedOperation.genMethodSqueleton()/]
+
+/* Accessors of the variables */
+[c.ownedAttribute.genAccesors()/]
+
+/* Classical Objective-C methods */
+- (NSString *) description;
+- (void) dealloc;
+
+@end
+[/file]
+[/template]
+
+[template public genAttributes(a : Property)]
+[a.type.genType()/] [a.name/];
+
+[/template]
+
+
+[template public genMethodSqueleton(o : Operation)]
+[o.genOperation()/];
+
+[/template]
 
 [template public genOperation(o : Operation)]
-[if (o.name.startsWith('asProperty_'))]
-[genProperty(o)/]
-[else]
-[if (o.visibility = VisibilityKind::private)]Private[else]Public[/if] [genMethod(o)/] [o.name/]([genArguments(o)/])
-	'[protected (o.name)]
-	' TODO : Complete method
-	[o.genActivityFlow()/]
-	'[/protected]
-End [if (o.returnResult()->exists(type <> null))]Function[else]Sub[/if]
-[/if]
+[if (o.isStatic)]+[else]-[/if] ([if(o.name.startsWith('init'))]id[elseif (o.returnResult()->exists(type <> null))][o.returnResult().type.genType()/][else]void[/if]) [o.name/][o.ownedParameter->select(direction <> ParameterDirectionKind::return).genParameter()/]
+[/template]
 
+[template public genParameter(p : Parameter)]
+([p.type.genType()/])[p.name/];
 [/template]
 
 
-[template public genMethod(o : Operation)]
-[if (o.returnResult()->exists(type <> null))]Function[else]Sub[/if]
-[/template]
+[template public genAccesors(a : Property)]
+- ([a.type.genType()/]) [a.name/];
+- (void) set[a.name.toUpperFirst()/]:([a.type.genType()/]) new[a.name.toUpperFirst()/];
 
-
-[template public genProperty(o : Operation)]
-[if (o.visibility = VisibilityKind::private)]Private[else]Public[/if] Property [o.name.replace('asProperty_', (''))/]()
-[if (o.returnResult()->exists(o.returnResult().type <> null))] As [o.returnResult().type.name/][/if]
-	Get
-		Return [o.name.replace('asProperty_', (''))/]
-	End Get
-	Set(ByVal value[if (o.returnResult()->exists(o.returnResult().type <> null))] As [o.returnResult().type.name/][/if])
-		[o.name.replace('asProperty_', (''))/] = value
-	End Set
-End Property
 
 [/template]
 
-
-[template public genArguments(o : Operation)]
-[for (p : Parameter | o.ownedParameter) separator (', ') ? (p.direction <> ParameterDirectionKind::return)][if (p <> o.returnResult())]ByVal [p.name/][if (p.type <> null)] As [p.type.name/][/if][/if][/for]
+[template public genType(t : Type)]
+[if (t.name = 'Integer')]int[elseif (t.name = 'Char')]char[elseif (t.name = 'Float')]float[elseif (t.name = 'Double')]double[elseif (t.name = 'void')]void[elseif (t.name = 'String')]NSString *[elseif (t.name = 'Boolean')]BOOL[else][t.name/] *[/if]
 [/template]
 
 
-[template public genActivityFlow(o : Operation)]
-[for (p : PackageableElement | o.getModel().packagedElement)][let a : Activity = p][if(o.name = a.name)][for (n : ActivityNode | a.ownedNode)][let i : InitialNode = n]
-[i.genActivityFlow()/]
-[/let][/for][/if][/let][/for]
-[/template]
-
-
-[template public genActivityFlow(n : ActivityNode) ? (n.oclIsTypeOf(InitialNode))]
-[for (e : ActivityEdge | n.outgoing)][e.target.genActivityFlow()/][/for]
-[/template]
-
-
-[template public genActivityFlow(n : ActivityNode) ? (n.oclIsTypeOf(OpaqueAction))]
-[for (n.outgoing)][n.outgoing.target.genActivityFlow()/][/for]
-[/template]
-
-
-[template public genActivityFlow(n : ActivityNode) ? (n.oclIsTypeOf(DecisionNode))]
-[for (o : ActivityEdge | n.outgoing)][n.outgoing.target.genActivityFlow()/]
-	If ([o.guard.stringValue()/]) ' [n.incoming.source.name/]
-		[o.target.genActivityFlow()/]
-	End If[/for]
+[template public genGeneralization(c : Class)]
+[if (c.generalization->exists(general <> null))][c.generalization.general.name/][else]NSObject[/if]
 [/template]
 
 
