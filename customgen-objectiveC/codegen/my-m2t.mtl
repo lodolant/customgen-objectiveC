@@ -122,15 +122,20 @@ int main(int argc, const char * argv['[]'/])
 // Generated from GenMyModel
 @interface [c.name/] : [c.genGeneralization()/]
 {
-	[c.attribute.genAttributes()/]
+[for (a : Property | c.ownedAttribute)]
+	[a.type.genAttribute()/]
+[/for]
 }
 
 /* Methods of the class*/
-[c.ownedOperation.genMethodSqueleton()/]
+[for (o : Operation | c.ownedOperation)] 
+[o.genMethodSqueleton()/]
+[/for]
 
 /* Accessors of the variables */
-[c.ownedAttribute.genAccesors()/]
-
+[for (a : Property | c.ownedAttribute)] 
+[a.genAccesors()/]
+[/for]
 /* Classical Objective-C methods */
 - (NSString *) description;
 - (void) dealloc;
@@ -139,15 +144,13 @@ int main(int argc, const char * argv['[]'/])
 [/file]
 [/template]
 
-[template public genAttributes(a : Property)]
-[a.type.genType()/] [a.name/];
-
+[template public genAttribute(t : Type)]
+[t.genType()/] [t.name/];
 [/template]
 
 
 [template public genMethodSqueleton(o : Operation)]
 [o.genOperation()/];
-
 [/template]
 
 [template public genOperation(o : Operation)]
@@ -155,14 +158,13 @@ int main(int argc, const char * argv['[]'/])
 [/template]
 
 [template public genParameter(p : Parameter)]
-([p.type.genType()/])[p.name/];
+([p.type.genType()/])[p.name/]
 [/template]
 
 
 [template public genAccesors(a : Property)]
 - ([a.type.genType()/]) [a.name/];
 - (void) set[a.name.toUpperFirst()/]:([a.type.genType()/]) new[a.name.toUpperFirst()/];
-
 
 [/template]
 
